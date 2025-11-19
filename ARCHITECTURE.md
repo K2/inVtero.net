@@ -128,48 +128,50 @@ PowerShell cmdlets for memory analysis:
 
 ### Analysis Pipeline
 
-```
-┌─────────────────┐
-│  Memory Dump    │
-│ (.vmem, .dmp,   │
-│  .raw, .dd)     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Mem Class     │  ◄── Format Detection
-│ (Memory Access) │  ◄── Run Detection
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│    Scanner      │  ◄── Self-Pointer Search
-│                 │  ◄── VMCS Detection
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│  PageTable      │  ◄── Page Table Walking
-│  Construction   │  ◄── Address Translation
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ DetectedProc    │  ◄── Process Grouping
-│   Collection    │  ◄── Address Space Mapping
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Symbol Loading  │  ◄── PDB Resolution
-│ Type Extraction │  ◄── Structure Binding
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│   Analysis      │  ◄── Python Scripts
-│   Scripts       │  ◄── Custom Queries
-└─────────────────┘
+```mermaid
+flowchart TD
+    Start([🚀 Start Analysis]) --> Input[📁 Memory Dump File]
+    
+    Input --> Format{🔍 Detect Format}
+    Format -->|VMware| VM[🖥️ VMware Parser]
+    Format -->|Xen| XEN[🌐 Xen Parser]
+    Format -->|Crash| CRASH[💥 Crash Dump Parser]
+    Format -->|Raw| RAW[📄 Raw Parser]
+    
+    VM --> Mem[💾 Mem Class<br/>Memory Access Layer]
+    XEN --> Mem
+    CRASH --> Mem
+    RAW --> Mem
+    
+    Mem --> Scanner[🔎 Scanner<br/>Physical Memory Scan]
+    Scanner --> SP[🎯 Self-Pointer<br/>Detection]
+    Scanner --> VMCS[🌀 VMCS<br/>Detection]
+    
+    SP --> PT[📑 Page Table<br/>Construction]
+    VMCS --> PT
+    
+    PT --> Proc[👤 DetectedProc<br/>Process Objects]
+    
+    Proc --> Group{🔄 Process<br/>Grouping}
+    Group -->|Same VM| G1[👥 Group 1<br/>Windows]
+    Group -->|Different VM| G2[👥 Group 2<br/>Linux]
+    Group -->|Nested| G3[👥 Group 3<br/>Nested VM]
+    
+    G1 --> Sym[🔐 Symbol Loading]
+    G2 --> Sym
+    G3 --> Sym
+    
+    Sym --> Type[📊 Type Extraction]
+    Type --> Analysis[✨ Analysis Scripts]
+    Analysis --> Output([📈 Results])
+    
+    style Start fill:#4caf50,stroke:#2e7d32,stroke-width:3px,color:#fff
+    style Output fill:#4caf50,stroke:#2e7d32,stroke-width:3px,color:#fff
+    style Format fill:#ff9800,stroke:#e65100,stroke-width:2px,color:#fff
+    style Scanner fill:#2196f3,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style PT fill:#9c27b0,stroke:#4a148c,stroke-width:2px,color:#fff
+    style Sym fill:#f44336,stroke:#b71c1c,stroke-width:2px,color:#fff
+    style Analysis fill:#00bcd4,stroke:#006064,stroke-width:2px,color:#fff
 ```
 
 ## Memory Run Management
@@ -185,45 +187,148 @@ Memory dumps may use sparse storage (only storing non-zero pages), creating gaps
 
 ## Process Detection Algorithm
 
-### Phase 1: Candidate Identification
-1. Scan physical memory in parallel
-2. Look for page table signatures (self-pointer patterns)
-3. Validate page table hierarchy
-4. Extract CR3 values
+### Detection Phases
 
-### Phase 2: Page Table Walking
-1. Use CR3 as root page table address
-2. Walk PML4 → PDP → PD → PT hierarchy
-3. Collect all valid page mappings
-4. Identify kernel vs. user space pages
-
-### Phase 3: Process Grouping
-1. Compare page table overlaps between candidates
-2. Group processes by correlation percentage
-3. Identify hypervisor layers vs. guest processes
-4. Assign process types (Windows, Linux, BSD, etc.)
-
-### Phase 4: Address Space Extraction
-1. Build complete virtual memory map
-2. Handle large pages (2MB, 1GB entries)
-3. Process Software PTE states
-4. Extract user and kernel memory
+```mermaid
+stateDiagram-v2
+    [*] --> Phase1: Start Scan
+    
+    state Phase1 {
+        [*] --> ScanMemory: Scan Physical Memory
+        ScanMemory --> FindPatterns: Parallel Search
+        FindPatterns --> ValidateEntries: Find Self-Pointers
+        ValidateEntries --> ExtractCR3: Validate Page Tables
+        ExtractCR3 --> [*]: Collect CR3 Values
+    }
+    
+    Phase1 --> Phase2: 159 Candidates Found
+    
+    state Phase2 {
+        [*] --> WalkTables: For Each CR3
+        WalkTables --> TraversePML4: Walk PML4 Level
+        TraversePML4 --> TraversePDP: Walk PDP Level
+        TraversePDP --> TraversePD: Walk PD Level
+        TraversePD --> TraversePT: Walk PT Level
+        TraversePT --> CollectMappings: Collect Valid PTEs
+        CollectMappings --> [*]: Build Address Map
+    }
+    
+    Phase2 --> Phase3: Page Tables Walked
+    
+    state Phase3 {
+        [*] --> CompareOverlaps: Compare Page Overlaps
+        CompareOverlaps --> CalculateCorrelation: Calculate Similarity
+        CalculateCorrelation --> AssignGroups: Group by Correlation
+        AssignGroups --> DetectOS: Detect OS Type
+        DetectOS --> [*]: Grouped Processes
+    }
+    
+    Phase3 --> Phase4: Processes Grouped
+    
+    state Phase4 {
+        [*] --> MapVirtual: Build Virtual Map
+        MapVirtual --> HandleLargePages: Process 2MB/1GB Pages
+        HandleLargePages --> ProcessSoftwarePTE: Handle Software PTEs
+        ProcessSoftwarePTE --> ExtractMemory: Extract User+Kernel
+        ExtractMemory --> [*]: Complete
+    }
+    
+    Phase4 --> [*]: Analysis Ready
+    
+    classDef phase1Style fill:#ffcdd2,stroke:#c62828,color:#000
+    classDef phase2Style fill:#c5cae9,stroke:#283593,color:#000
+    classDef phase3Style fill:#b2dfdb,stroke:#00695c,color:#000
+    classDef phase4Style fill:#c8e6c9,stroke:#2e7d32,color:#000
+    
+    class Phase1 phase1Style
+    class Phase2 phase2Style
+    class Phase3 phase3Style
+    class Phase4 phase4Style
+```
 
 ## Hypervisor Support
 
-### VMware
-- VMCS revision field: `0x00000001` (nested) or `0x00004000`
-- EPTP location: Index 14 in VMCS
-- Supports nested VMware instances
+### Nested Virtualization Architecture
 
-### Xen
-- Xen-specific page table markers
-- EPT (Extended Page Tables) handling
-- PV (Paravirtualization) guest support
+```mermaid
+graph TB
+    subgraph "🖥️ Physical Host"
+        PM[Physical Memory]
+        HVMCS[Host VMCS Pages]
+        HCR3[Host CR3 Values]
+    end
+    
+    subgraph "🌐 Hypervisor Layer 1"
+        HV1[VMware/Xen/Hyper-V]
+        EPTP1[EPTP Index 14]
+        GVM1[Guest VM Control]
+    end
+    
+    subgraph "💻 Guest VM 1"
+        GCR3_1[Guest CR3]
+        GPT1[Guest Page Tables]
+        GPROC1[Guest Processes]
+    end
+    
+    subgraph "💻 Guest VM 2 - Nested"
+        NVMCS[Nested VMCS]
+        NEPTP[Nested EPTP]
+        NVM[Nested Guest VM]
+    end
+    
+    PM -->|Scan| HVMCS
+    HVMCS -->|Extract| EPTP1
+    EPTP1 -->|Map| GVM1
+    
+    GVM1 -->|VM1| GCR3_1
+    GVM1 -->|VM2 Nested| NVMCS
+    
+    GCR3_1 --> GPT1
+    GPT1 --> GPROC1
+    
+    NVMCS --> NEPTP
+    NEPTP --> NVM
+    
+    HCR3 -.->|Self-Pointer<br/>Detection| GPT1
+    
+    style PM fill:#263238,stroke:#000,stroke-width:3px,color:#fff
+    style HVMCS fill:#37474f,stroke:#000,stroke-width:2px,color:#fff
+    style HV1 fill:#0277bd,stroke:#01579b,stroke-width:2px,color:#fff
+    style GCR3_1 fill:#00897b,stroke:#00695c,stroke-width:2px,color:#fff
+    style GPROC1 fill:#43a047,stroke:#2e7d32,stroke-width:2px,color:#fff
+    style NVMCS fill:#5e35b1,stroke:#4527a0,stroke-width:2px,color:#fff
+    style NVM fill:#8e24aa,stroke:#6a1b9a,stroke-width:2px,color:#fff
+```
 
-### Generic
-- VMCS scanning works for Intel VT-x based hypervisors
-- Extensible to new CPU microarchitectures
+### VMware Detection Flow
+
+```mermaid
+sequenceDiagram
+    participant Scanner as 🔍 Scanner
+    participant Memory as 💾 Memory
+    participant VMCS as 🌀 VMCS
+    participant EPTP as 🗺️ EPTP
+    participant Guest as 💻 Guest VM
+    
+    Scanner->>Memory: Scan for VMCS signature
+    Memory-->>Scanner: Found at offset 0x...
+    
+    Scanner->>VMCS: Read VMCS structure
+    VMCS-->>Scanner: Revision ID: 0x00000001
+    
+    Scanner->>VMCS: Extract EPTP (index 14)
+    VMCS-->>EPTP: EPTP value obtained
+    
+    Scanner->>EPTP: Parse EPT hierarchy
+    EPTP-->>Guest: Map guest physical pages
+    
+    Guest->>Scanner: Guest CR3 values
+    Scanner->>Guest: Extract guest processes
+    
+    Note over Scanner,Guest: Nested VMs processed recursively
+    
+    Guest-->>Scanner: Complete guest memory map
+```
 
 ## Performance Optimizations
 

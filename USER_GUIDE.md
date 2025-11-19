@@ -274,6 +274,55 @@ print(my_struct.name)
 
 ## Common Workflows
 
+### Workflow Overview
+
+```mermaid
+graph LR
+    subgraph "📥 Input"
+        A[Memory Dump]
+    end
+    
+    subgraph "🔄 Common Workflows"
+        B[Extract All<br/>Processes]
+        C[Verify System<br/>Integrity]
+        D[Dump Specific<br/>Process]
+        E[Nested VM<br/>Analysis]
+        F[Malware<br/>Hunt]
+    end
+    
+    subgraph "📤 Output"
+        G[Process List]
+        H[Integrity Report]
+        I[Memory Dump]
+        J[VM Extraction]
+        K[YARA Matches]
+    end
+    
+    A --> B
+    A --> C
+    A --> D
+    A --> E
+    A --> F
+    
+    B --> G
+    C --> H
+    D --> I
+    E --> J
+    F --> K
+    
+    style A fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
+    style B fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    style C fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    style D fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#000
+    style E fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#000
+    style F fill:#ffebee,stroke:#d32f2f,stroke-width:2px,color:#000
+    style G fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style H fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style I fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style J fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style K fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+```
+
 ### Workflow 1: Extract All Processes from VMware Memory
 
 ```python
@@ -376,6 +425,51 @@ for proc in vtero.Processes:
 ```
 
 ## Output Interpretation
+
+### Analysis Flow Visualization
+
+```mermaid
+graph TD
+    Start([▶️ Start Analysis]) --> Scan[⏱️ Performance Metrics]
+    
+    Scan --> Detect{🔍 Detection Phase}
+    Detect -->|Found| Proc[👤 Process Detection]
+    Detect -->|Not Found| Error[❌ No Processes]
+    
+    Proc --> Corr{📊 Correlation Analysis}
+    Corr -->|100%| Perfect[✅ Perfect Match<br/>Same VM]
+    Corr -->|90%| Good[✔️ Good Match<br/>Shared Kernel]
+    Corr -->|<50%| Poor[⚠️ Different VM<br/>or Corrupted]
+    
+    Perfect --> Group[👥 Process Groups]
+    Good --> Group
+    Poor --> Review[🔄 Review Settings]
+    
+    Group --> Type{🖥️ Process Type}
+    Type -->|Windows| Win[🪟 Windows Process]
+    Type -->|Linux| Lin[🐧 Linux Process]
+    Type -->|BSD| BSD[😈 BSD Process]
+    Type -->|VMCS| VM[🌀 Hypervisor]
+    
+    Win --> Results[📈 Analysis Results]
+    Lin --> Results
+    BSD --> Results
+    VM --> Results
+    
+    Error --> Review
+    Review --> Detect
+    
+    style Start fill:#4caf50,stroke:#2e7d32,stroke-width:3px,color:#fff
+    style Results fill:#4caf50,stroke:#2e7d32,stroke-width:3px,color:#fff
+    style Perfect fill:#66bb6a,stroke:#2e7d32,stroke-width:2px,color:#fff
+    style Good fill:#9ccc65,stroke:#558b2f,stroke-width:2px,color:#fff
+    style Poor fill:#ffb74d,stroke:#ef6c00,stroke-width:2px,color:#000
+    style Error fill:#ef5350,stroke:#c62828,stroke-width:2px,color:#fff
+    style Win fill:#64b5f6,stroke:#1976d2,stroke-width:2px,color:#fff
+    style Lin fill:#4db6ac,stroke:#00796b,stroke-width:2px,color:#fff
+    style BSD fill:#ba68c8,stroke:#7b1fa2,stroke-width:2px,color:#fff
+    style VM fill:#ff8a65,stroke:#d84315,stroke-width:2px,color:#fff
+```
 
 ### Performance Metrics
 

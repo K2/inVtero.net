@@ -1,24 +1,257 @@
 # inVtero.net
-## Binary Setup package
-https://github.com/ShaneK2/inVtero.net/blob/master/quickdumps/publish.zip
 
-Linux uses symbol servers for type resolution, it just works ;)
+[![Build status](https://ktwo.visualstudio.com/DefaultCollection/_apis/public/build/definitions/16d48273-682e-4b01-8392-1f83fc2c3bcd/4/badge)](https://ktwo.visualstudio.com)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Check out inVteroCore release for providing integrity for XEN and VMWare on Linux (or anywhere CORECLR runs, OSX & FBSD)
+**Cross-platform memory forensics framework for Virtual Machine Introspection and physical memory analysis**
+
+inVtero.net uses microarchitecture-independent techniques to find and extract processes, hypervisors (including nested), and OS instances from memory dumps—without requiring OS-specific profiles or configurations.
+
+## ✨ Features
+
+- 🔍 **Automatic Process Detection** - No profiles or configuration needed
+- 🖥️ **Multi-OS Support** - Windows, Linux, BSD (all versions)
+- 🔄 **Nested Hypervisor Analysis** - VMware, Xen, Hyper-V
+- 🔐 **Code Integrity Verification** - Cryptographic hash-based attestation
+- 🐍 **Python Scripting** - IronPython for custom analysis workflows
+- 🚀 **High Performance** - Multi-core parallel processing
+- 📝 **Symbol Resolution** - Automatic PDB download from Microsoft symbol server
+- 🎯 **Format Agnostic** - Supports .vmem, .vmsn, .dmp, .raw, .dd, .xendump
+
+## 📚 Documentation
+
+- **[Installation Guide](INSTALLATION.md)** - Platform-specific setup instructions
+- **[User Guide](USER_GUIDE.md)** - Quick start and common workflows
+- **[Architecture](ARCHITECTURE.md)** - System design and technical details
+- **[API Reference](API_REFERENCE.md)** - Complete API documentation
+- **[Python Scripting](PYTHON_SCRIPTING.md)** - Scripting guide and examples
+- **[Development Guide](DEVELOPMENT.md)** - Contributing and building from source
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
+
+## 🚀 Quick Start
+
+### Windows
+
+1. **Download binary package**:
+   ```
+   https://github.com/K2/inVtero.net/blob/master/quickdumps/publish.zip
+   ```
+
+2. **Register msdia140.dll** (IMPORTANT):
+   ```cmd
+   regsvr32 msdia140.dll
+   ```
+
+3. **Analyze a memory dump**:
+   ```cmd
+   quickdumps.exe -f "C:\dumps\memory.dmp"
+   ```
+
+### Linux / macOS
+
+1. **Install .NET Core**:
+   ```bash
+   # Ubuntu/Debian
+   sudo apt-get install dotnet-sdk-8.0
+   
+   # macOS
+   brew install --cask dotnet-sdk
+   ```
+
+2. **Clone and build**:
+   ```bash
+   git clone --recursive https://github.com/K2/inVtero.net.git
+   cd inVtero.net/inVtero.core
+   dotnet build inVtero.core.sln -c Release
+   ```
+
+3. **Analyze**:
+   ```bash
+   cd quickcore/bin/Release/net6.0
+   dotnet quickcore.dll -f /path/to/memory.dump
+   ```
+
+See **[INSTALLATION.md](INSTALLATION.md)** for detailed instructions.
+
+## 🔄 Analysis Workflow
+
+```mermaid
+graph TB
+    A[📁 Memory Dump<br/>.vmem .dmp .raw] --> B{🔍 Format<br/>Detection}
+    B -->|VMware| C[🖥️ VMware Handler]
+    B -->|Xen| D[🌐 Xen Handler]
+    B -->|Crash Dump| E[💥 PAGEDUMP64 Handler]
+    B -->|Generic| F[📄 Raw Handler]
+    
+    C --> G[🧩 Memory Run<br/>Extraction]
+    D --> G
+    E --> G
+    F --> G
+    
+    G --> H[🔎 Page Table<br/>Scanner]
+    H --> I[🎯 Self-Pointer<br/>Detection]
+    H --> J[🌀 VMCS<br/>Detection]
+    
+    I --> K[📊 Process<br/>Grouping]
+    J --> K
+    
+    K --> L[🔐 Symbol<br/>Resolution]
+    L --> M[✨ Analysis<br/>Results]
+    
+    style A fill:#e1f5ff,stroke:#01579b,stroke-width:3px,color:#000
+    style M fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px,color:#000
+    style H fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000
+    style K fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#000
+    style L fill:#ffe0b2,stroke:#e65100,stroke-width:2px,color:#000
+```
+
+## 💡 Usage Examples
+
+### Command Line
+
+```cmd
+# Basic analysis
+quickdumps.exe -f memory.dmp
+
+# Save analysis state for faster re-analysis
+quickdumps.exe -f memory.dmp --save
+```
+
+### Python Scripting
+
+```python
+import clr
+clr.AddReferenceToFileAndPath("inVtero.net.dll")
+from inVtero.net import *
+
+# Configure and scan
+opts = ConfigOptions()
+opts.FileName = "memory.dmp"
+opts.VersionsToEnable = PTType.GENERIC
+
+vtero = Scan.Scanit(opts)
+
+# Access detected processes
+for proc in vtero.Processes:
+    print(f"CR3: {proc.CR3Value:016X} Type: {proc.PageTableType}")
+
+# Load symbols and analyze
+kernel = min(vtero.Processes, key=lambda p: p.CR3Value)
+kvs = kernel.ScanAndLoadModules()
+```
+
+See **[USER_GUIDE.md](USER_GUIDE.md)** and **[PYTHON_SCRIPTING.md](PYTHON_SCRIPTING.md)** for more examples.
+
+## 🎯 No Configuration Needed
+
+inVtero.net uses **hardware-level detection techniques** instead of OS-specific profiles:
+
+- **Self-Pointer Detection** (Windows) - Finds processes via PML4 self-referential entries
+- **Recursive Page Directory** (BSD) - Identifies processes through recursive mappings  
+- **VMCS Detection** - Locates hypervisors via Virtual Machine Control Structures
+- **Direct Mapping** (Linux) - Detects kernel direct map regions
+
+This approach works across **all OS versions** (Windows XP → Windows 11, Linux 2.6 → 6.x) without updates.
+
+## 🏗️ Architecture Overview
+
+```mermaid
+graph LR
+    subgraph "🎯 Detection Layer"
+        A[Self-Pointer<br/>Scanner]
+        B[VMCS<br/>Detector]
+        C[Memory Run<br/>Analyzer]
+    end
+    
+    subgraph "💾 Memory Layer"
+        D[Physical<br/>Memory]
+        E[Page<br/>Tables]
+        F[Virtual<br/>Memory]
+    end
+    
+    subgraph "🔍 Analysis Layer"
+        G[Symbol<br/>Resolver]
+        H[Type<br/>System]
+        I[Integrity<br/>Checker]
+    end
+    
+    subgraph "📊 Output Layer"
+        J[Process<br/>List]
+        K[Memory<br/>Dumps]
+        L[Python<br/>Scripts]
+    end
+    
+    A --> E
+    B --> E
+    C --> D
+    E --> F
+    
+    F --> G
+    G --> H
+    H --> I
+    
+    I --> J
+    I --> K
+    I --> L
+    
+    style A fill:#ffcdd2,stroke:#c62828,stroke-width:2px,color:#000
+    style B fill:#f8bbd0,stroke:#ad1457,stroke-width:2px,color:#000
+    style C fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#000
+    style G fill:#c5cae9,stroke:#283593,stroke-width:2px,color:#000
+    style H fill:#bbdefb,stroke:#1565c0,stroke-width:2px,color:#000
+    style I fill:#b2dfdb,stroke:#00695c,stroke-width:2px,color:#000
+    style J fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style K fill:#dcedc8,stroke:#558b2f,stroke-width:2px,color:#000
+    style L fill:#fff9c4,stroke:#f57f17,stroke-width:2px,color:#000
+```
 
 
-##$ IMPORTANT (Windows users on .NET) => You do need to have msdia140.dll registered "cmd /c regsvr32 msdia140.dll" (see zip)
+## 📊 Supported Formats
 
+| Format | Description | Source |
+|--------|-------------|--------|
+| `.vmem` | VMware snapshot memory | VMware Workstation/ESXi |
+| `.vmsn` | VMware suspended state | VMware Workstation |
+| `.dmp` | Windows crash dump | Windows BSOD (PAGEDUMP64) |
+| `.raw`, `.dd` | Raw memory dump | Various acquisition tools |
+| `.xendump` | Xen memory dump | Xen hypervisor |
+| Generic | Flat binary file | Custom tools |
 
-No configuration needed, completely dynamic / duck typing
+## 🔬 Technical Approach
 
-## Windows 64 bit all versions
-![In Vtero](https://raw.githubusercontent.com/ShaneK2/inVtero.net/gh-pages/images/inVtero.jpg)
+### Process Detection
 
+inVtero.net identifies processes using **microarchitecture-independent** techniques:
 
+1. **Scan physical memory** for page table signatures
+2. **Identify self-pointer patterns** in page tables
+3. **Extract CR3 values** (page table base pointers)
+4. **Validate page table hierarchies**
+5. **Group processes** by memory correlation
 
+### Hypervisor Detection
 
-### Use Quickdumps + python to automatically analyze any memory dump
+For nested VM analysis:
+
+1. **Locate VMCS pages** by signature
+2. **Extract EPTP** (Extended Page Table Pointer)
+3. **Map guest physical to host physical** memory
+4. **Recursively analyze** nested VMs
+
+### Why This Works
+
+Traditional tools require:
+- ❌ OS version-specific profiles
+- ❌ Manual configuration
+- ❌ Frequent updates for new OS versions
+
+inVtero.net leverages:
+- ✅ Hardware-level invariants
+- ✅ CPU-OS interaction patterns
+- ✅ Self-describing page tables
+- ✅ Future-proof detection
+
+## 🖥️ GUI and Scripting
 
 New UI for memory editing (dis/assemble and patch) supported formats.  Use "Loader()" on a vtero instance like;
 

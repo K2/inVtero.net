@@ -363,6 +363,51 @@ print("EPROCESS size: %d" % eproc_size)
 
 ## Advanced Techniques
 
+### Memory Analysis Patterns
+
+```mermaid
+graph TB
+    subgraph "🎯 Analysis Patterns"
+        A[Linked List Walking]
+        B[Pool Scanning]
+        C[Registry Parsing]
+        D[Network Enumeration]
+    end
+    
+    subgraph "💾 Memory Structures"
+        E[LIST_ENTRY]
+        F[POOL_HEADER]
+        G[CMHIVE]
+        H[TCB Structures]
+    end
+    
+    subgraph "📊 Results"
+        I[Process List]
+        J[Allocations]
+        K[Registry Keys]
+        L[Connections]
+    end
+    
+    A --> E
+    B --> F
+    C --> G
+    D --> H
+    
+    E --> I
+    F --> J
+    G --> K
+    H --> L
+    
+    style A fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px,color:#000
+    style B fill:#ce93d8,stroke:#6a1b9a,stroke-width:2px,color:#000
+    style C fill:#ba68c8,stroke:#6a1b9a,stroke-width:2px,color:#000
+    style D fill:#ab47bc,stroke:#6a1b9a,stroke-width:2px,color:#fff
+    style I fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style J fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style K fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+    style L fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px,color:#000
+```
+
 ### Walking Linked Lists
 
 ```python
